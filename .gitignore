@@ -1,0 +1,3 @@
+redis-tls/*
+data/*
+*.conf

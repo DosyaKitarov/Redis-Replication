@@ -1,0 +1,123 @@
+version: '3.9'
+
+services:
+  redis-master:
+    image: redis:7.0.15-alpine3.19
+    container_name: redis-master
+    ports:
+      - "6379:6379"
+    volumes:
+      - "./config/redis-master/mount:/etc/redis/config:rw"
+      - "./data/master:/data"
+      - "./redis-tls:/etc/redis/certs:rw"
+    command: ["redis-server", "/etc/redis/config/redis.conf"]
+    restart: unless-stopped
+    networks:
+      redis-network:
+        ipv4_address: 172.25.0.10
+        aliases:
+          - redis-master
+
+  redis-slave1:
+    image: redis:7.0.15-alpine3.19
+    container_name: redis-slave1
+    ports:
+      - "6380:6379"
+    volumes:
+      - "./config/redis-slave1/mount:/etc/redis/config:rw"
+      - "./data/slave1:/data"
+      - "./redis-tls:/etc/redis/certs"
+    command: ["sh", "-c", "chmod -R 0777 /etc/redis/config && redis-server /etc/redis/config/redis.conf"]
+    restart: unless-stopped
+    depends_on:
+      - redis-master
+    networks:
+      redis-network:
+        ipv4_address: 172.25.0.11
+
+  redis-slave2:
+    image: redis:7.0.15-alpine3.19
+    container_name: redis-slave2
+    ports:
+      - "6381:6379"
+    volumes:
+      - "./config/redis-slave2/mount:/etc/redis/config:rw"
+      - "./data/slave2:/data"
+      - "./redis-tls:/etc/redis/certs"
+    command: ["sh", "-c", "chmod -R 0777 /etc/redis/config && redis-server /etc/redis/config/redis.conf"]
+    restart: unless-stopped
+    depends_on:
+      - redis-master
+    networks:
+      redis-network:
+        ipv4_address: 172.25.0.12
+
+  redis-sentinel1:
+    image: redis:7.0.15-alpine3.19
+    container_name: redis-sentinel1 
+    command: ["sh", "-c", "sleep 3 && chmod -R 0777 /etc/redis/config && redis-server /etc/redis/config/sentinel.conf --sentinel"]
+    ports:
+      - "26379:26379"
+    volumes:
+      - "./config/redis-sentinel1/mount:/etc/redis/config:rw"
+      - "./redis-tls:/etc/redis/certs"
+    restart: unless-stopped
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    extra_hosts:
+      - "redis-master:172.25.0.10"
+      - "redis-slave1:172.25.0.11"
+      - "redis-slave2:172.25.0.12"
+    networks:
+      redis-network:
+
+  redis-sentinel2:
+    image: redis:7.0.15-alpine3.19
+    container_name: redis-sentinel2
+    command: ["sh", "-c", "sleep 3 && chmod -R 0777 /etc/redis/config && redis-server /etc/redis/config/sentinel.conf --sentinel"]
+    ports:
+      - "26380:26379"
+    volumes:
+      - "./config/redis-sentinel2/mount:/etc/redis/config:rw"
+      - "./redis-tls:/etc/redis/certs"
+    restart: unless-stopped
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    extra_hosts:
+      - "redis-master:172.25.0.10"
+      - "redis-slave1:172.25.0.11"
+      - "redis-slave2:172.25.0.12"
+    networks:
+      redis-network:
+
+  redis-sentinel3:
+    image: redis:7.0.15-alpine3.19
+    container_name: redis-sentinel3
+    command: ["sh", "-c", "sleep 3 && chmod -R 0777 /etc/redis/config && redis-server /etc/redis/config/sentinel.conf --sentinel"]
+    ports:
+      - "26381:26379"
+    volumes:
+      - "./config/redis-sentinel3/mount:/etc/redis/config:rw"
+      - "./redis-tls:/etc/redis/certs"
+    restart: unless-stopped
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    extra_hosts:
+      - "redis-master:172.25.0.10"
+      - "redis-slave1:172.25.0.11"
+      - "redis-slave2:172.25.0.12"
+    networks:
+      redis-network:
+
+networks:
+  redis-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
